@@ -209,21 +209,17 @@ def go_double_lines(image):
             flag_n = 1
 
         if flag_n:
-            k1 = 0.035
+            k1 = -0.035
             k2 = 17
-            d_x = -d_x
             print("d_x", k1 * d_x, "angle", k2 * angle)
             # steering_angle = constraint(-20,20,k1*d_x +k2*angle) -1.5
-
             st = constraint(-1, 1, (k1 * d_x + k2 * angle)/20)
             sm = constraint(-1, 1, 0.5-angle/np.pi)
     if flag_show_img:
         cv2.imshow("bird_", warped_image)
-        cv2.waitKey(25)
+        cv2.waitKey(20)
 
     return sm, st
-
-
 
 def smart_car():
     print("==========piCar Client Start==========")
