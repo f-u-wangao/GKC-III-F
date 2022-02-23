@@ -262,5 +262,11 @@ def smart_car():
 
 
 if __name__ == '__main__':
-    smart_car()
+    print("============================")
+    print("1------go_double_lines")
+    print("2------stop_back")
+    key = input()
+    if key == 1:
+        smart_car()
+    #smart_car()
 
