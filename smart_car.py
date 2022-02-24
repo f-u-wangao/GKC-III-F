@@ -242,7 +242,7 @@ def go_double_lines(image):
         cv2.imshow("bird_", warped_image)
         cv2.waitKey(10)
 
-    return sm, st,warped_image
+    return sm, st
 
 def smart_car():
     print("==========piCar Client Start==========")
