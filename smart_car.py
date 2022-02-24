@@ -142,7 +142,7 @@ def go_double_lines(image):
     global flag_show_img, sm, st, last_frame_line
 
     corr_img = cv2.undistort(image, intrinsicMat, distortionCoe, None, intrinsicMat)
-    cv2.imshow('1',corr_img)
+    #cv2.imshow('1',corr_img)
     img = cv2.resize(corr_img, (320, 240), interpolation=cv2.INTER_CUBIC)
 
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
