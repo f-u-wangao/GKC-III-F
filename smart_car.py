@@ -281,11 +281,5 @@ def smart_car():
 
 
 if __name__ == '__main__':
-    print("============================")
-    print("1------go_double_lines")
-    print("2------stop_back")
-    print("============================")
-    key = input()
-    if key == 1:
-        smart_car()
+    smart_car()
 
