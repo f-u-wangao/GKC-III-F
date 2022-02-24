@@ -6,6 +6,7 @@ import time
 import cv2
 import numpy as np
 import math
+import os
 
 
 global flag_show_img
@@ -16,16 +17,31 @@ height = 480
 global sm,st
 sm = 0
 st = 0
+global last_frame_line   # 1:left;0:double;-1:right
+last_frame_line = 0
 
 intrinsicMat = np.array([[489.3828, 0.8764, 297.5558],
                             [0, 489.8446, 230.0774],
                             [0, 0, 1]])
 distortionCoe = np.array([-0.4119,0.1709,0,0.0011, 0.018])
 
-src_pts = np.float32([[150,277],[490,277],[620,360],[20,360]])
-dst_pts = np.float32([[105,176],[535,176],[535,434],[105,434]])
+# src_pts = np.float32([[150,277],[490,277],[620,360],[20,360]])
+# dst_pts = np.float32([[105,176],[535,176],[535,434],[105,434]])
+#
+#
+#
 
+# intrinsicMat = np.array( [[4.6103702730752963e+02, 0., 3.5418630431854262e+02],
+#                           [0.,4.6064503212814503e+02, 2.2282685137757812e+02],
+#                           [0., 0., 1.]])
+# distortionCoe = np.array([ -4.1165212539677309e-01, 2.2238052367908023e-01,
+#                            9.4008882780610356e-04, -7.5876901718103422e-04, -6.2809466175509324e-02 ])
 
+# src_pts = np.float32([[240,240],[490,240],[630,390],[40,390]])/2
+# dst_pts = np.float32([[160,40],[480,40],[480,440],[160,440]])
+
+src_pts = np.float32([[209,276],[468,274],[524,304],[154,321]])/2
+dst_pts = np.float32([[125,90],[515,90],[515,464],[125,464]])/2
 def birdView(img,M):
     '''
     Transform image to birdeye view
@@ -123,9 +139,10 @@ def go_double_lines(image):
     :param image:
     :return: sm;st
     '''
-    global flag_show_img,sm,st
+    global flag_show_img, sm, st, last_frame_line
 
     corr_img = cv2.undistort(image, intrinsicMat, distortionCoe, None, intrinsicMat)
+    cv2.imshow('1',corr_img)
     img = cv2.resize(corr_img, (320, 240), interpolation=cv2.INTER_CUBIC)
 
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -141,8 +158,8 @@ def go_double_lines(image):
     warped_image = birdView(warped_image, transform_matrix['M'])
     cv2.imshow('warped', warped_image)
     cv2.waitKey(20)
-
-    warped_image = cv2.dilate(warped_image, np.ones((3, 3), np.uint8))
+    warped_image = 255 - warped_image
+    # warped_image = cv2.dilate(warped_image, np.ones((3, 3), np.uint8))
     warped_image = cv2.erode(warped_image, np.ones((3, 3), np.uint8))
 
     lines_raw = cv2.HoughLinesP(warped_image, 1, np.pi / 180, 100, 100, 100, 50)
@@ -160,14 +177,17 @@ def go_double_lines(image):
             cv2.line(warped_image, (x[0], x[1]), (x[2], x[3]), (255, 0, 255), 4)
             cv2.line(warped_image, (x[0], x[1]), (x[2], x[3]), (0, 0, 255), 1)
         flag_n = 0
-        offset = 125
+        offset = 90
 
         if n == 1:
             c1 = float(lines[0, 2] - lines[0, 0]) / float(lines[0, 3] - lines[0, 1])
             bottomx = lines[0, 0] + float(240 - lines[0, 1]) * (c1 + 0.0001)
             print("bottom x :", bottomx)
-
-            if bottomx < 160:
+            if bottomx < 160 and last_frame_line > -1:
+                last_frame_line = 1
+            elif bottomx > 160 and last_frame_line < 1:
+                last_frame_line = -1
+            if last_frame_line == 1:
                 print('left line')
                 if flag_show_img:
                     x_1 = lines[0, 0] + offset
@@ -180,7 +200,7 @@ def go_double_lines(image):
                 d_x = (lines[0, 0] + lines[0, 2]) / 2.0 + offset - 160
 
                 angle = angle_d[0, 0]
-            else:
+            elif last_frame_line == -1:
                 if flag_show_img:
                     x_1 = lines[0, 0] - offset
                     x_2 = lines[0, 2] - offset
@@ -192,6 +212,7 @@ def go_double_lines(image):
                 angle = angle_d[0, 0]
             flag_n = 1
         if n == 2:
+            last_frame_line = 0
             x_1 = int((lines[0, 0] + lines[1, 0]) / 2.0)
             y_1 = int((lines[0, 1] + lines[1, 1]) / 2.0)
             x_2 = int((lines[0, 2] + lines[1, 2]) / 2.0)
@@ -214,12 +235,14 @@ def go_double_lines(image):
             print("d_x", k1 * d_x, "angle", k2 * angle)
             # steering_angle = constraint(-20,20,k1*d_x +k2*angle) -1.5
             st = constraint(-1, 1, (k1 * d_x + k2 * angle)/20)
-            sm = constraint(-1, 1, 0.5-angle/np.pi)
+            sm = constraint(-1, 1, 1.0 - abs(angle)/np.pi)
+            print(st)
+
     if flag_show_img:
         cv2.imshow("bird_", warped_image)
-        cv2.waitKey(20)
+        cv2.waitKey(10)
 
-    return sm, st
+    return sm, st,warped_image
 
 def smart_car():
     print("==========piCar Client Start==========")
@@ -261,8 +284,8 @@ if __name__ == '__main__':
     print("============================")
     print("1------go_double_lines")
     print("2------stop_back")
+    print("============================")
     key = input()
     if key == 1:
         smart_car()
-    #smart_car()
 
