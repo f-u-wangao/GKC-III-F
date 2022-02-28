@@ -132,37 +132,52 @@ def distance(plot_0, plot_1):
         (plot_0[1] - plot_1[1]) * (plot_0[1] - plot_1[1]))
 
 
+def go_double_lines_1(img):
+    '''
 
-def go_double_lines(image):
+    :param img:
+    :return:
+    '''
+    global flag_show_img, sm, st
+    img = cv2.resize
+    return sm, st
+def go_double_lines(img):
     '''
 
     :param image:
     :return: sm;st
     '''
     global flag_show_img, sm, st, last_frame_line
-
-    corr_img = cv2.undistort(image, intrinsicMat, distortionCoe, None, intrinsicMat)
+    flag_show_img = 0
+    t1 = time.time()
+    #corr_img = cv2.undistort(image, intrinsicMat, distortionCoe, None, intrinsicMat)
+    t2 = time.time()
+    print('t1',t2-t1)
     #cv2.imshow('1',corr_img)
-    img = cv2.resize(corr_img, (320, 240), interpolation=cv2.INTER_CUBIC)
-
+    img = cv2.resize(img, (320, 240), interpolation=cv2.INTER_CUBIC)
+    t3 = time.time()
+    print("t2",t3-t2)
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     # gray = cv2.GaussianBlur(gray, (3, 3), 0)
     # gray = cv2.medianBlur(gray, 3)
     ret, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    can = cv2.Canny(gray, 100, 400)
-    add = can + binary
+    #can = cv2.Canny(gray, 100, 400)
+    #add = binary
 
     transform_matrix = perspective_transform(src_pts, dst_pts)
-    warped_image = add
+    #warped_image = add
 
-    warped_image = birdView(warped_image, transform_matrix['M'])
-    cv2.imshow('warped', warped_image)
-    cv2.waitKey(20)
+    warped_image = birdView(binary, transform_matrix['M'])
+    #t4 = time.time()
+    #print('t3',t4-t3)
+    #cv2.imshow('warped', warped_image)
+    #cv2.waitKey(20)
     warped_image = 255 - warped_image
     # warped_image = cv2.dilate(warped_image, np.ones((3, 3), np.uint8))
-    warped_image = cv2.erode(warped_image, np.ones((3, 3), np.uint8))
+    # warped_image = cv2.erode(warped_image, np.ones((3, 3), np.uint8))
 
     lines_raw = cv2.HoughLinesP(warped_image, 1, np.pi / 180, 100, 100, 100, 50)
+    #print(lines_raw.shape)
     # cv2.imshow("bird", warped_image)
     # print(lines.shape)
 
@@ -212,19 +227,21 @@ def go_double_lines(image):
                 angle = angle_d[0, 0]
             flag_n = 1
         if n == 2:
+
             last_frame_line = 0
-            x_1 = int((lines[0, 0] + lines[1, 0]) / 2.0)
-            y_1 = int((lines[0, 1] + lines[1, 1]) / 2.0)
-            x_2 = int((lines[0, 2] + lines[1, 2]) / 2.0)
-            y_2 = int((lines[0, 3] + lines[1, 3]) / 2.0)
-            if distance([x_1, y_1], [x_2, y_2]) < 50:
-                x_1 = int((lines[0, 0] + lines[1, 2]) / 2.0)
-                y_1 = int((lines[0, 1] + lines[1, 3]) / 2.0)
-                x_2 = int((lines[0, 2] + lines[1, 0]) / 2.0)
-                y_2 = int((lines[0, 3] + lines[1, 1]) / 2.0)
-            if flag_show_img:
-                cv2.line(warped_image, (x_1, y_1), (x_2, y_2), (255, 0, 255), 6)
-                cv2.line(warped_image, (x_1, y_1), (x_2, y_2), (0, 0, 255), 2)
+            #
+            # x_1 = int((lines[0, 0] + lines[1, 0]) / 2.0)
+            # y_1 = int((lines[0, 1] + lines[1, 1]) / 2.0)
+            # x_2 = int((lines[0, 2] + lines[1, 2]) / 2.0)
+            # y_2 = int((lines[0, 3] + lines[1, 3]) / 2.0)
+            # if distance([x_1, y_1], [x_2, y_2]) < 50:
+            #     x_1 = int((lines[0, 0] + lines[1, 2]) / 2.0)
+            #     y_1 = int((lines[0, 1] + lines[1, 3]) / 2.0)
+            #     x_2 = int((lines[0, 2] + lines[1, 0]) / 2.0)
+            #     y_2 = int((lines[0, 3] + lines[1, 1]) / 2.0)
+            # if flag_show_img:
+            #     cv2.line(warped_image, (x_1, y_1), (x_2, y_2), (255, 0, 255), 6)
+            #     cv2.line(warped_image, (x_1, y_1), (x_2, y_2), (0, 0, 255), 2)
             d_x = (lines[0, 0] + lines[1, 0] + lines[0, 2] + lines[1, 2]) / 4.0 - 160
             angle = (angle_d[0, 0] + angle_d[1, 0]) / 2.0
             flag_n = 1
@@ -240,7 +257,7 @@ def go_double_lines(image):
 
     if flag_show_img:
         cv2.imshow("bird_", warped_image)
-        cv2.waitKey(10)
+        #cv2.waitKey(10)
 
     return sm, st
 
@@ -249,13 +266,11 @@ def smart_car():
     d = driver()
     d.setStatus(motor=0.0, servo=0.0, dist=0x00, mode="stop")
     d.setStatus(mode="speed")
-
+    cap = cv2.VideoCapture(0)
+    cap2 = cv2.VideoCapture(1)
     while True:
 
         t1 = time.time()
-
-        cap = cv2.VideoCapture(0)
-        cap2 = cv2.VideoCapture(1)
         _, frame = cap.read()
         _, frame2 = cap2.read()
         cv2.imshow("image1", cv2.flip(frame, 1))
@@ -265,11 +280,10 @@ def smart_car():
         sm, st = go_double_lines(frame)
         d.setStatus(motor=sm, servo=st)
         print("Motor: %0.2f, Servo: %0.2f" % (sm, st))
-        # time.sleep(1)
+        time.sleep(1)
         # # d.heartBeat()
-        # d.getStatus(sensor=0, mode=0)
-        # time.sleep(1)
-
+        d.getStatus(sensor=0, mode=0)
+        time.sleep(1)
         t2 = time.time()
         print("time:", t2-t1)
 
