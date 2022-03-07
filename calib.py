@@ -35,7 +35,7 @@ for fname in images:
 
         cv2.drawChessboardCorners(img, (8, 6), corners, ret)  # 记住，OpenCV的绘制函数一般无返回值
         cv2.imshow('img', img)
-        cv2.waitKey(2000)
+        cv2.waitKey(0)
 
 print(len(img_points))
 cv2.destroyAllWindows()
@@ -50,3 +50,15 @@ print("rvecs:\n", rvecs)  # 旋转向量  # 外参数
 print("tvecs:\n", tvecs ) # 平移向量  # 外参数
 
 print("-----------------------------------------------------")
+
+def undistortion(image, camera_matrix, dist_coeff):
+    undistortion_image = cv2.undistort(image, camera_matrix, dist_coeff)
+
+    return undistortion_image
+
+img_path = "./back/010.jpg"
+img = cv2.imread(img_path)
+cv2.imshow("original", img)
+undistortion_img = undistortion(img, mtx, dist)
+cv2.imshow("undistortion", undistortion_img)
+cv2.waitKey(0)
