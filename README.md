@@ -42,7 +42,6 @@ https://www.cnblogs.com/wenbozhu/p/10697374.html
 #### 开发
 1. 完善巡双线代码细节：smart_car_1.1
 2. 实现车位像素坐标系下位置提取：返回车位四点像素坐标，仅对边缘较规则四边形（不一定严格要求矩形）有效，后续可精调畸变矫正矩阵和透视变换矩阵使得车位矩形位置尽可能准确，**边缘不规则问题尚未解决（地毯有褶皱）**
-<img src="https://user-images.githubusercontent.com/62023129/157039261-8841d77e-6dd7-40f6-93fa-7a61a65afb7a.png" width="500" height="313" align="middle" />
 ![image](https://user-images.githubusercontent.com/62023129/157039261-8841d77e-6dd7-40f6-93fa-7a61a65afb7a.png)
 ![image](https://user-images.githubusercontent.com/62023129/157041176-888be9eb-ea4d-4e16-bf44-2c84add6aeb1.png)
 
