@@ -110,7 +110,7 @@ def lines_order(lines):
     for i in range(N - 1):
         # print(abs(line_order_0[i, 1] - line_order_0[i + 2, 1]))
         num += 1
-        if abs(line_order_0[i, 1] - line_order_0[i + 1, 1]) > 200 or i == N - 2:
+        if abs(line_order_0[i, 1] - line_order_0[i + 1, 1]) > 120 or i == N - 2:
             #if abs(line_order_0[i - int(num / 2), 0]) < np.pi / 3:
                 # print(i)
                 average = line_order[i - int(num / 2)]
@@ -170,7 +170,7 @@ def go_double_lines(img):
     #cv2.waitKey(20)
     warped_image = 255 - warped_image
     # warped_image = cv2.dilate(warped_image, np.ones((3, 3), np.uint8))
-    warped_image = cv2.erode(warped_image, np.ones((5, 5), np.uint8))
+    warped_image = cv2.erode(warped_image, np.ones((3, 3), np.uint8))
 
     lines_raw = cv2.HoughLinesP(warped_image, 1, np.pi / 180, 100, 100, 100, 50)
     #print(lines_raw.shape)
@@ -243,7 +243,7 @@ def go_double_lines(img):
 
         if flag_n:
             k1 = -0.035
-            k2 = 17
+            k2 = 10
             print("d_x", k1 * d_x, "angle", k2 * angle)
             # steering_angle = constraint(-20,20,k1*d_x +k2*angle) -1.5
             st = constraint(-1, 1, (k1 * d_x + k2 * angle)/20)
@@ -260,7 +260,8 @@ def smart_car():
     print("==========piCar Client Start==========")
     d = driver()
     d.setStatus(motor=0.0, servo=0.0, dist=0x00, mode="stop")
-
+    counter = 0
+    time_c = 0
     try:
         d.setStatus(mode="speed")
         cap = cv2.VideoCapture(0)
@@ -269,20 +270,17 @@ def smart_car():
             t1 = time.time()
             _, frame = cap.read()
             _, frame2 = cap2.read()
-            # cv2.imshow("image1", cv2.flip(frame, 1))
-            # s
-            # cv2.imshow("image2", cv2.flip(frame2, -1))
-            # cv2.waitKey(3)
-
-            sm, st = go_double_lines(frame)
-            d.setStatus(motor=sm * 0.1, servo=st)
-            print("Motor: %0.2f, Servo: %0.2f" % (sm, st))
-            time.sleep(1)
-            # # d.heartBeat()
-            d.getStatus(sensor=0, mode=0)
-            time.sleep(1)
+            frame1 = cv2.flip(frame1, 1)
+            frame2 = cv2.flip(frame2, -1)
+            sm, st = go_double_lines(frame2)
             t2 = time.time()
-            print("time:", t2 - t1)
+            if time_c+t2-t1 < 0.5:
+                time_c += t2 - t1
+            else:
+                d.setStatus(motor=sm * 0.1, servo=st)
+                print("Motor: %0.2f, Servo: %0.2f" % (sm, st))
+                print("time:", time_c+t2 - t1)
+                time_c = 0
 
     except KeyboardInterrupt:
         pass
