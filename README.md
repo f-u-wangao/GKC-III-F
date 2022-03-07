@@ -22,7 +22,7 @@ https://www.cnblogs.com/wenbozhu/p/10697374.html
 1. 实现巡双线代码：smart_car_1.0
    数字图像处理：畸变矫正、图像压缩、透视变化、二值化、腐蚀降噪、霍夫检测-------》提取车道线\
    控制算法：Stanley算法，横向偏差+角度偏差\
-   https://blog.csdn.net/renyushuai900/article/details/98460758\
+   https://blog.csdn.net/renyushuai900/article/details/98460758  \
    控制周期：0.4s
 2. 在采集图像上的测试效果：中间白色空心线为计算的道路中线，即控制跟踪线；基本能提取出车道线，并计算控制速度及转角；略受反光影响。
 ![43fffd320f897bba76f1949171874af](https://user-images.githubusercontent.com/62023129/157029778-31c21b97-0f01-448d-afdb-e94a7c1ae788.png)
@@ -36,7 +36,7 @@ https://www.cnblogs.com/wenbozhu/p/10697374.html
 1. 图像显示错乱，与预先测试完全不同；预期速度太快，降速（0.1）；小车运行结果错乱；完全不可用 
 2. 可能解决：\
    控制率太低？精简代码，控制周期:0.2S，无效；\
-   控制率太高？增加time.sleep，控制周期：2.2S,无效；\
+   控制率太高？增加time.sleep，控制周期：2.2S,无效；
 
 ### 3.7第四周
 #### 开发
