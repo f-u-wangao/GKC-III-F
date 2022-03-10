@@ -20,7 +20,7 @@ def undistortion(image, camera_matrix, dist_coeff):
 
     return undistortion_image
 
-img_path = "./back/018.jpg"
+img_path = "./front/008.jpg"
 img = cv2.imread(img_path)
 cv2.imshow("original", img)
 undistortion_img = undistortion(img, mtx, dist)
