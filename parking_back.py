@@ -179,8 +179,6 @@ def smart_car():
         cv2.imshow("image2", cv2.flip(frame2, -1))
         cv2.waitKey(3)
         sm, st = parking_front(frame2, args)
-        d.setStatus(motor=sm, servo=st)
-        print("Motor: %0.2f, Servo: %0.2f" % (sm, st))
         t2 = time.time()
         if time_c + t2 - t1 < 0.5:
             time_c += t2 - t1
