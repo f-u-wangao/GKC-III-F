@@ -25,28 +25,10 @@ intrinsicMat = np.array([[489.3828, 0.8764, 297.5558],
                             [0, 0, 1]])
 distortionCoe = np.array([-0.4119,0.1709,0,0.0011, 0.018])
 
-# src_pts = np.float32([[150,277],[490,277],[620,360],[20,360]])
-# dst_pts = np.float32([[105,176],[535,176],[535,434],[105,434]])
-#
-#
-#
-
-# intrinsicMat = np.array( [[4.6103702730752963e+02, 0., 3.5418630431854262e+02],
-#                           [0.,4.6064503212814503e+02, 2.2282685137757812e+02],
-#                           [0., 0., 1.]])
-# distortionCoe = np.array([ -4.1165212539677309e-01, 2.2238052367908023e-01,
-#                            9.4008882780610356e-04, -7.5876901718103422e-04, -6.2809466175509324e-02 ])
-
-# src_pts = np.float32([[240,240],[490,240],[630,390],[40,390]])/2
-# dst_pts = np.float32([[160,40],[480,40],[480,440],[160,440]])
-
-# src_pts = np.float32([[209,276],[468,274],[524,304],[154,321]])/2
-# dst_pts = np.float32([[125,90],[515,90],[515,464],[125,464]])/2
 
 src_pts = np.float32([[255,279],[440,277],[567,378],[157,379]])/2
 dst_pts = np.float32([[80,0],[240,0],[240,240],[80,240]])
-
-
+M = cv2.getPerspectiveTransform(src_pts,dst_pts)
 
 def birdView(img,M):
     '''
@@ -87,13 +69,13 @@ def line(x1, y1, x2, y2):
         return np.array([np.pi/2, y2])
     else:
         k = (y1 - y2) / (x1 - x2)
-        k_1 =  (x1 - x2) / (y1 - y2)
+        k_1 = (x1 - x2) / (y1 - y2)
         b = y1 - (y1 - y2) * x1 / (x1 - x2)
         angle = np.arctan(k_1)
         d = b / math.sqrt(1 + k * k)
         return np.array([angle, d])
 
-def lines_order(lines):
+def lines_order(lines,dist = 120):
     '''
     :param lines: HoughLinesP [N,1,4]
     :return:  important lines [n,4]  x1,y1,x2,y2;[n,2]  angle，d
@@ -108,10 +90,17 @@ def lines_order(lines):
     num = 0
     important_line_point = []
     important_line = []
-    for i in range(N - 1):
+    for i in range(N):
         # print(abs(line_order_0[i, 1] - line_order_0[i + 2, 1]))
         num += 1
-        if abs(line_order_0[i, 1] - line_order_0[i + 1, 1]) > 120 or i == N - 2:
+        if i == N-1:
+            average = line_order[i - int(num / 2)]
+            important_line_point.append(list(average))
+            important_line.append(list(line_order_0[i - int(num / 2)]))
+            num = 0
+            break
+        #if abs(line_order_0[i, 1] - line_order_0[i + 1, 1]) > dist or i == N - 2:
+        if abs(line_order_0[i, 1] - line_order_0[i + 1, 1]) > dist:
             #if abs(line_order_0[i - int(num / 2), 0]) < np.pi / 3:
                 # print(i)
                 average = line_order[i - int(num / 2)]
@@ -138,15 +127,7 @@ def distance(plot_0, plot_1):
         (plot_0[1] - plot_1[1]) * (plot_0[1] - plot_1[1]))
 
 
-def go_double_lines_1(img):
-    '''
 
-    :param img:
-    :return:
-    '''
-    global flag_show_img, sm, st
-    img = cv2.resize
-    return sm, st
 def go_double_lines(img):
     '''
 
@@ -162,9 +143,8 @@ def go_double_lines(img):
 
     ret, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
-    transform_matrix = perspective_transform(src_pts, dst_pts)
 
-    warped_image = birdView(binary, transform_matrix['M'])
+    warped_image = birdView(binary, M)
     #t4 = time.time()
     #print('t3',t4-t3)
     #cv2.imshow('warped', warped_image)

@@ -5,132 +5,38 @@ from driver import driver
 import time
 import cv2
 import numpy as np
-import math
-import os
-from smart_car import flag_show_img, width, height, sm, st,\
-    intrinsicMat, distortionCoe, birdView, perspective_transform,\
+import argparse
+
+from smart_car import sm,st,intrinsicMat, distortionCoe, birdView, perspective_transform,\
     line, lines_order, constraint,distance
 
+global parking_back_stage
+parking_back_stage = 0
 
-# src_pts = np.float32([[240,240],[490,240],[630,390],[40,390]])/2
-# dst_pts = np.float32([[160,40],[480,40],[480,440],[160,440]])
+# src_pts = np.float32([[279,109],[375,108],[402,160],[233,161]])/2
+# dst_pts = np.float32([[130,70],[190,70],[190,150],[130,150]])
+# M = cv2.getPerspectiveTransform(src_pts,dst_pts)
 
-# src_pts = np.float32([[209,276],[468,274],[524,304],[154,321]])/2
-# dst_pts = np.float32([[125,90],[515,90],[515,464],[125,464]])/2
+#### back
+# src_pts = np.float32([[292,166],[377,165],[406,206],[267,207]])/2
+# dst_pts = np.float32([[130,40],[190,40],[190,140],[130,140]])
+# M = cv2.getPerspectiveTransform(src_pts,dst_pts)
 
-src_pts = np.float32([[279,109],[375,108],[402,160],[233,161]])/2
-dst_pts = np.float32([[130,70],[190,70],[190,150],[130,150]])
+# front
+src_pts = np.float32([[293,239],[414,238],[460,277],[250,278]])/2
+dst_pts = np.float32([[130,40],[190,40],[190,140],[130,140]])
+M = cv2.getPerspectiveTransform(src_pts,dst_pts)
 
-def go_double_lines(image):
-    '''
+'''========================parameters=================================='''
+parser = argparse.ArgumentParser(description='parking_parameters')
+parser.add_argument('--parking_space', type=int,default = 0,choices = [0,1,2,3,4], help='parking_space')
+parser.add_argument('--k1',type = float,default = 0.5,help = 'center_error control rate')
+parser.add_argument('--k2',type = float,default = 0.5,help = 'angle control rate')
+parser.add_argument('--done_dist',type = float,default = 220,help = 'parking done distance')
+parser.add_argument('--k3',type = float,default = 0.1,help = 'over rate')
+parser.add_argument('--show',type = bool,default = True, help = 'show images or not')
+'''======================================================================='''
 
-    :param image:
-    :return: sm;st
-    '''
-    global flag_show_img, sm, st, last_frame_line
-
-    corr_img = cv2.undistort(image, intrinsicMat, distortionCoe, None, intrinsicMat)
-    cv2.imshow('1',corr_img)
-    img = cv2.resize(corr_img, (320, 240), interpolation=cv2.INTER_CUBIC)
-
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    # gray = cv2.GaussianBlur(gray, (3, 3), 0)
-    # gray = cv2.medianBlur(gray, 3)
-    ret, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    can = cv2.Canny(gray, 100, 400)
-    add = can + binary
-
-    transform_matrix = perspective_transform(src_pts, dst_pts)
-    warped_image = add
-
-    warped_image = birdView(warped_image, transform_matrix['M'])
-    cv2.imshow('warped', warped_image)
-    cv2.waitKey(20)
-    warped_image = 255 - warped_image
-    # warped_image = cv2.dilate(warped_image, np.ones((3, 3), np.uint8))
-    warped_image = cv2.erode(warped_image, np.ones((3, 3), np.uint8))
-
-    lines_raw = cv2.HoughLinesP(warped_image, 1, np.pi / 180, 100, 100, 100, 50)
-    # cv2.imshow("bird", warped_image)
-    # print(lines.shape)
-
-    if lines_raw is not None:
-        lines, angle_d = lines_order(lines_raw)
-        lines = lines.astype(np.int32)
-        n = lines.shape[0]
-
-        for x in lines:
-            if flag_show_img == 0:
-                break
-            cv2.line(warped_image, (x[0], x[1]), (x[2], x[3]), (255, 0, 255), 4)
-            cv2.line(warped_image, (x[0], x[1]), (x[2], x[3]), (0, 0, 255), 1)
-        flag_n = 0
-        offset = 90
-
-        if n == 1:
-            c1 = float(lines[0, 2] - lines[0, 0]) / float(lines[0, 3] - lines[0, 1])
-            bottomx = lines[0, 0] + float(240 - lines[0, 1]) * (c1 + 0.0001)
-            print("bottom x :", bottomx)
-            if bottomx < 160 and last_frame_line > -1:
-                last_frame_line = 1
-            elif bottomx > 160 and last_frame_line < 1:
-                last_frame_line = -1
-            if last_frame_line == 1:
-                print('left line')
-                if flag_show_img:
-                    x_1 = lines[0, 0] + offset
-                    x_2 = lines[0, 2] + offset
-                    y_1 = lines[0, 1]
-                    y_2 = lines[0, 3]
-                    cv2.line(warped_image, (x_1, y_1), (x_2, y_2), (255, 0, 255), 6)
-                    cv2.line(warped_image, (x_1, y_1), (x_2, y_2), (0, 0, 255), 2)
-
-                d_x = (lines[0, 0] + lines[0, 2]) / 2.0 + offset - 160
-
-                angle = angle_d[0, 0]
-            elif last_frame_line == -1:
-                if flag_show_img:
-                    x_1 = lines[0, 0] - offset
-                    x_2 = lines[0, 2] - offset
-                    y_1 = lines[0, 1]
-                    y_2 = lines[0, 3]
-                    cv2.line(warped_image, (x_1, y_1), (x_2, y_2), (255, 0, 255), 6)
-                    cv2.line(warped_image, (x_1, y_1), (x_2, y_2), (0, 0, 255), 2)
-                d_x = (lines[0, 0] + lines[0, 2]) / 2.0 - offset - 160
-                angle = angle_d[0, 0]
-            flag_n = 1
-        if n == 2:
-            last_frame_line = 0
-            x_1 = int((lines[0, 0] + lines[1, 0]) / 2.0)
-            y_1 = int((lines[0, 1] + lines[1, 1]) / 2.0)
-            x_2 = int((lines[0, 2] + lines[1, 2]) / 2.0)
-            y_2 = int((lines[0, 3] + lines[1, 3]) / 2.0)
-            if distance([x_1, y_1], [x_2, y_2]) < 50:
-                x_1 = int((lines[0, 0] + lines[1, 2]) / 2.0)
-                y_1 = int((lines[0, 1] + lines[1, 3]) / 2.0)
-                x_2 = int((lines[0, 2] + lines[1, 0]) / 2.0)
-                y_2 = int((lines[0, 3] + lines[1, 1]) / 2.0)
-            if flag_show_img:
-                cv2.line(warped_image, (x_1, y_1), (x_2, y_2), (255, 0, 255), 6)
-                cv2.line(warped_image, (x_1, y_1), (x_2, y_2), (0, 0, 255), 2)
-            d_x = (lines[0, 0] + lines[1, 0] + lines[0, 2] + lines[1, 2]) / 4.0 - 160
-            angle = (angle_d[0, 0] + angle_d[1, 0]) / 2.0
-            flag_n = 1
-
-        if flag_n:
-            k1 = -0.035
-            k2 = 17
-            print("d_x", k1 * d_x, "angle", k2 * angle)
-            # steering_angle = constraint(-20,20,k1*d_x +k2*angle) -1.5
-            st = constraint(-1, 1, (k1 * d_x + k2 * angle)/20)
-            sm = constraint(-1, 1, 1.0 - abs(angle)/np.pi)
-            print(st)
-
-    if flag_show_img:
-        cv2.imshow("bird_", warped_image)
-        cv2.waitKey(10)
-
-    return sm, st,warped_image
 
 def filter_blue_light(image):
     img = cv2.cvtColor(image,cv2.COLOR_BGR2HSV)
@@ -138,14 +44,16 @@ def filter_blue_light(image):
     upper_blue_light = np.array([98,255,255])
     mask = cv2.inRange(img,lower_blue_light,upper_blue_light)
     light_blue = cv2.bitwise_and(img,img,mask = mask)
+    light_blue = cv2.cvtColor(light_blue, cv2.COLOR_HSV2BGR)
     return light_blue
 
 def filter_blue_dark(image):
     img = cv2.cvtColor(image,cv2.COLOR_BGR2HSV)
-    lower_blue_dark = np.array([100,80,70])
+    lower_blue_dark = np.array([100, 80, 70])
     upper_blue_dark = np.array([130,255,255])
     mask = cv2.inRange(img,lower_blue_dark,upper_blue_dark)
     dark_blue = cv2.bitwise_and(img,img,mask = mask)
+    dark_blue = cv2.cvtColor(dark_blue, cv2.COLOR_HSV2BGR)
     return dark_blue
 
 def filter_yellow(image):
@@ -154,7 +62,7 @@ def filter_yellow(image):
     upper_yellow = np.array([60,255,255])
     mask = cv2.inRange(img,lower_yellow,upper_yellow)
     yellow = cv2.bitwise_and(img,img,mask = mask)
-    print(yellow.shape)
+    yellow = cv2.cvtColor(yellow, cv2.COLOR_HSV2BGR)
     return yellow
 
 def filter_red(image):
@@ -163,113 +71,106 @@ def filter_red(image):
     upper_red = np.array([175,255,255])
     mask = cv2.inRange(img,lower_red,upper_red)
     red = cv2.bitwise_and(img,img,mask = mask)
-
+    red = cv2.cvtColor(red,cv2.COLOR_HSV2BGR)
     return red
 
-def get_parking_space(image, parking_space):
+def filter_white(image):
+    img = cv2.cvtColor(image,cv2.COLOR_BGR2HSV)
+    lower_white = np.array([0,0,230])
+    upper_white = np.array([350,350,350])
+    mask = cv2.inRange(img,lower_white,upper_white)
+    white = cv2.bitwise_and(img,img,mask = mask)
+    white = cv2.cvtColor(white,cv2.COLOR_HSV2BGR)
+    return white
+
+def parking_front(image,args):
     '''
-    :param image:
-    :param parking_space:
-    :return:
+    :param image: raw image
+    :param args:
+    :return:sm, st
     '''
+    global parking_back_stage,sm,st
     corr_img = cv2.undistort(image, intrinsicMat, distortionCoe, None, intrinsicMat)
     img = cv2.resize(corr_img, (320, 240), interpolation=cv2.INTER_CUBIC)
-    if parking_space == 1:
+    img = birdView(img, M)
+    # cv2.imshow('bird',img)
+
+    if args.parking_space == 1:
         img = filter_blue_dark(img)
-    elif parking_space == 2:
+    elif args.parking_space == 2:
         img = filter_red(img)
-    elif parking_space == 3:
+    elif args.parking_space == 3:
         img = filter_yellow(img)
-    elif parking_space == 4:
+    elif args.parking_space == 4:
         img = filter_blue_light(img)
+    elif args.parking_space == 0:
+        img = filter_white(img)
 
+    # cv2.imshow('filter', img)
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    # gray = cv2.GaussianBlur(gray, (3, 3), 0)
-    # gray = cv2.medianBlur(gray, 3)
-    ret, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    can = cv2.Canny(gray, 100, 400)
-    add = can + binary
-    return img
+    gray = cv2.erode(gray, np.ones((3, 3), np.uint8))
+    contours,hierarchy = cv2.findContours(gray,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    area = []
+    for c in contours:
+        area.append(cv2.contourArea(c))
+    if area:
+        max_idx = np.argmax(np.array(area))
+        max = contours[max_idx]
+        rect = cv2.minAreaRect(max)
+        box = cv2.boxPoints(rect)
+        box = np.int0(box)
 
+        cv2.drawContours(gray,[box],0,(255,255,255),1)
+        if args.show:
+            cv2.imshow("parking_space",gray)
+        center = np.mean(box,axis = 0)
+        # print(center)
+        center_error = -1*np.arctan2(center[0]-160,240-center[1])
+        box = box[np.lexsort(box.T)]
+        print(box)
+        angle_d_0 = line(box[0,0],box[0,1],box[2,0],box[2,1])
+        angle_error = angle_d_0[0]
+        if box[2,1] == box[3,1]:
+            angle_d_1 = line(box[0, 0], box[0, 1], box[2, 0], box[2, 1])
+            if abs(angle_d_0[0]) < abs(angle_d_1[0]):
+                angle_error = angle_d_0[0]
+            else:
+                angle_error = angle_d_1[0]
 
-def parking_back(image,parking_space):
-    '''
+        dist = distance(center,[160,240])
+        print("center_error",center_error)
+        print("angle_error",angle_error)
+        print("dist",dist)
 
-    :param image:
-    :return: sm;st
-    '''
+        if parking_back_stage == 0 :
+            if abs(center_error) < 0.1 and abs(angle_error)<0.1:
+                parking_back_stage = 2
+            else:
+                parking_back_stage = 1
+            first_center_error = center_error
+        if parking_back_stage == 1:
+            st = args.k1 * center_error +args.k2*angle_error
+            if abs(center_error) < abs(first_center_error) *args.k3 and center_error * first_center_error < 0:
+                parking_back_stage = 2
+        if parking_back_stage == 2:
+            st = args.k1 * center_error + args.k2 * angle_error
+            if center[1] > args.done_dist:
+                st = 0
+                parking_back_stage = 3
+    return sm,st
 
-    global flag_show_img, sm, st
-
-    corr_img = cv2.undistort(image, intrinsicMat, distortionCoe, None, intrinsicMat)
-    #cv2.imshow('1',corr_img)
-    img = cv2.resize(corr_img, (320, 240), interpolation=cv2.INTER_CUBIC)
-    if parking_space == 1:
-        img = filter_blue_dark(img)
-    elif parking_space == 2:
-        img = filter_red(img)
-    elif parking_space == 3:
-        img = filter_yellow(img)
-    elif parking_space == 4:
-        img = filter_blue_light(img)
-
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    # gray = cv2.GaussianBlur(gray, (3, 3), 0)
-    # gray = cv2.medianBlur(gray, 3)
-    ret, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    can = cv2.Canny(gray, 100, 400)
-    add = can + binary
-
-    transform_matrix = perspective_transform(src_pts, dst_pts)
-    warped_image = add
-
-    warped_image = birdView(warped_image, transform_matrix['M'])
-    cv2.imshow('warped', warped_image)
-    cv2.waitKey(20)
-    warped_image = 255 - warped_image
-    # warped_image = cv2.dilate(warped_image, np.ones((3, 3), np.uint8))
-    warped_image = cv2.erode(warped_image, np.ones((3, 3), np.uint8))
-
-    lines_raw = cv2.HoughLinesP(warped_image, 1, np.pi / 180, 100, 100, 100, 50)
-
-
-    if flag_show_img:
-        cv2.imshow("bird_", warped_image)
-        cv2.waitKey(10)
-
-    return sm, st,warped_image
-
-def get_bird_image(image):
-
-    corr_img = cv2.undistort(image, intrinsicMat, distortionCoe, None, intrinsicMat)
-    cv2.imshow('corr_img',corr_img)
-    img = cv2.resize(corr_img, (320, 240), interpolation=cv2.INTER_CUBIC)
-    transform_matrix = perspective_transform(src_pts, dst_pts)
-    warped_image = birdView(img, transform_matrix['M'])
-
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    ret, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    can = cv2.Canny(gray, 100, 400)
-    add = can + binary
-    return warped_image
 
 def smart_car():
     print("==========piCar Client Start==========")
     print("=============stop mode================")
-    print("Please select a parking space(1-4)")
-    parking_space = input()
-    while parking_space != '1' and parking_space != '2' and parking_space != '3' and parking_space != '4':
-        print("This parking space does not exit.")
-        print("please select again.")
-        parking_space = input()
-    print("parking space:", parking_space)
+    global parking_back_stage
+    args = parser.parse_args()
     d = driver()
     d.setStatus(motor=0.0, servo=0.0, dist=0x00, mode="stop")
     d.setStatus(mode="speed")
-
+    time_c = 0
     while True:
         t1 = time.time()
-
         cap = cv2.VideoCapture(0)
         cap2 = cv2.VideoCapture(1)
         _, frame = cap.read()
@@ -277,18 +178,20 @@ def smart_car():
         cv2.imshow("image1", cv2.flip(frame, 1))
         cv2.imshow("image2", cv2.flip(frame2, -1))
         cv2.waitKey(3)
-
-        sm, st = parking_back(frame2, parking_space)
+        sm, st = parking_front(frame2, args)
         d.setStatus(motor=sm, servo=st)
         print("Motor: %0.2f, Servo: %0.2f" % (sm, st))
-        # time.sleep(1)
-        # # d.heartBeat()
-        # d.getStatus(sensor=0, mode=0)
-        # time.sleep(1)
-
         t2 = time.time()
-        print("time:", t2-t1)
-
+        if time_c + t2 - t1 < 0.5:
+            time_c += t2 - t1
+        else:
+            d.setStatus(motor=sm * 0.1, servo=st)
+            print("Motor: %0.2f, Servo: %0.2f" % (sm, st))
+            print("time:", time_c + t2 - t1)
+            time_c = 0
+        if parking_back_stage == 3:
+            print("parking done")
+            break
     d.setStatus(motor=0.0, servo=0.0, dist=0x00, mode="stop")
     d.close()
     del d
@@ -296,35 +199,13 @@ def smart_car():
     return 0
 
 if __name__ == '__main__':
-    # smart_car()
-    img = cv2.imread('./stop/back/009.jpg')
-    cv2.imshow("raw",img)
-    img = cv2.undistort(img, intrinsicMat, distortionCoe, None, intrinsicMat)
-
-    cv2.imshow('corr_img',img)
-    t1 = time.time()
-    img = cv2.resize(img, (320, 240), interpolation=cv2.INTER_CUBIC)
-    #cv2.imshow('resize', img)
-
-    transform_matrix = perspective_transform(src_pts, dst_pts)
-    img = birdView(img, transform_matrix['M'])
-    cv2.imshow('bird',img)
-    img_yellow = filter_yellow(img)
-    img_red = filter_red(img)
-    img_light_blue = filter_blue_light(img)
-    img_dark_blue = filter_blue_dark(img)
-    t2 = time.time()
-    print(t2-t1)
-    cv2.imshow('yellow', img_yellow)
-    cv2.imshow('red', img_red)
-    cv2.imshow("light_blue", img_light_blue)
-    cv2.imshow("dark_blue", img_dark_blue)
-
-    # gray = cv2.cvtColor(img_light_blue, cv2.COLOR_RGB2GRAY)
-    # ret, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    # can = cv2.Canny(gray, 100, 400)
-    # cv2.imshow("binary",binary)
-    # cv2.imshow("can", can)
-    cv2.waitKey(100000)
+    smart_car()
+    # # img = cv2.imread('./stop/back/008.jpg')
+    # img = cv2.imread('./wwh/front/002.jpg')
+    # # img = cv2.imread('./wwh/back/003.jpg')
+    # cv2.imshow("raw",img)
+    # args = parser.parse_args()
+    # parking_front(img,args)
+    # cv2.waitKey(100000)
 
 
