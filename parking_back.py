@@ -166,30 +166,33 @@ def smart_car():
     global parking_back_stage
     args = parser.parse_args()
     d = driver()
-    d.setStatus(motor=0.0, servo=0.0, dist=0x00, mode="stop")
-    d.setStatus(mode="speed")
-    time_c = 0
-    while True:
-        t1 = time.time()
-        cap = cv2.VideoCapture(0)
-        cap2 = cv2.VideoCapture(1)
-        _, frame = cap.read()
-        _, frame2 = cap2.read()
-        cv2.imshow("image1", cv2.flip(frame, 1))
-        cv2.imshow("image2", cv2.flip(frame2, -1))
-        cv2.waitKey(3)
-        sm, st = parking_front(frame2, args)
-        t2 = time.time()
-        if time_c + t2 - t1 < 0.5:
-            time_c += t2 - t1
-        else:
-            d.setStatus(motor=sm * 0.1, servo=st)
-            print("Motor: %0.2f, Servo: %0.2f" % (sm, st))
-            print("time:", time_c + t2 - t1)
-            time_c = 0
-        if parking_back_stage == 3:
-            print("parking done")
-            break
+    try:
+        d.setStatus(motor=0.0, servo=0.0, dist=0x00, mode="stop")
+        d.setStatus(mode="speed")
+        time_c = 0
+        while True:
+            t1 = time.time()
+            cap = cv2.VideoCapture(0)
+            cap2 = cv2.VideoCapture(1)
+            _, frame = cap.read()
+            _, frame2 = cap2.read()
+            cv2.imshow("image1", cv2.flip(frame, 1))
+            cv2.imshow("image2", cv2.flip(frame2, -1))
+            cv2.waitKey(3)
+            sm, st = parking_front(frame2, args)
+            t2 = time.time()
+            if time_c + t2 - t1 < 0.5:
+                time_c += t2 - t1
+            else:
+                d.setStatus(motor=sm * 0.1, servo=st)
+                print("Motor: %0.2f, Servo: %0.2f" % (sm, st))
+                print("time:", time_c + t2 - t1)
+                time_c = 0
+            if parking_back_stage == 3:
+                print("parking done")
+                break
+    except KeyboardInterrupt:
+        pass
     d.setStatus(motor=0.0, servo=0.0, dist=0x00, mode="stop")
     d.close()
     del d
