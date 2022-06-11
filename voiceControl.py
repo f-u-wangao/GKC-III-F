@@ -97,13 +97,16 @@ def string_match(str):
     return None
 
 
-def voiceControl(filePath, rec_time):
-    string_match(record_and_recognize(filePath, rec_time))
+def voiceControl():
+    filePath = 'recordForControl.wav'
+    rec_time = 3
+    return string_match(record_and_recognize(filePath, rec_time))
 
 
 if __name__ == '__main__':
 
-    filePath = 'records/recordForControl.wav'
-    rec_time = 3
-
-    voiceControl(filePath, rec_time)
+    while True:
+        try:
+            voiceControl()
+        except KeyboardInterrupt:
+            break

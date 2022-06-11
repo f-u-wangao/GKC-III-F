@@ -7,3 +7,4 @@ dist
 build
 /back
 /front
+*.wav
